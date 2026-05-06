@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIS2 Scope Checker — Are you in scope?</title>
+  <meta name="description" content="Answer 5 questions and get an honest assessment of your NIS2 / Cyberbeveiligingswet exposure. Free, no email required." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0f0e0d;
+      --paper: #f5f2ec;
+      --paper2: #ede9e0;
+      --accent: #1a3a2a;
+      --accent2: #c8401e;
+      --mid: #6b6457;
+      --border: rgba(15,14,13,0.12);
+      --radius: 6px;
+    }
+
+    html, body {
+      background: var(--paper);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    .shell {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    .header {
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.2rem;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    .progress-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 2rem;
+    }
+
+    .progress-step {
+      height: 3px;
+      flex: 1;
+      background: var(--paper2);
+      border-radius: 2px;
+      transition: background 0.3s;
+    }
+
+    .progress-step.done { background: var(--accent); }
+    .progress-step.active { background: var(--accent2); }
+
+    .step { display: none; }
+    .step.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 8px;
+    }
+
+    .question {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      line-height: 1.35;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--mid);
+      margin-bottom: 1.5rem;
+      line-height: 1.55;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      background: white;
+      transition: border-color 0.15s, background 0.15s;
+      text-align: left;
+      width: 100%;
+    }
+
+    .opt:hover { border-color: var(--accent); background: #fafaf8; }
+    .opt.selected { border-color: var(--accent); background: #eef3ef; }
+    .opt.selected .opt-dot { background: var(--accent); border-color: var(--accent); }
+
+    .opt-dot {
+      width: 16px; height: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: all 0.15s;
+    }
+
+    .opt-text { font-size: 14px; line-height: 1.45; display: block; }
+    .opt-sub { font-size: 12px; color: var(--mid); margin-top: 2px; display: block; }
+
+    .nav {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--ink);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary { background: var(--ink); color: white; border-color: var(--ink); }
+    .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+    .btn-ghost { color: var(--mid); border-color: var(--border); }
+    .btn-ghost:hover { border-color: var(--mid); color: var(--ink); }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* Result */
+    .result { display: none; animation: fadeIn 0.3s ease; }
+    .result.active { display: block; }
+
+    .verdict-banner {
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+      border-left: 4px solid;
+    }
+
+    .verdict-in-scope { background: #fff3f0; border-color: var(--accent2); }
+    .verdict-indirect { background: #fffbf0; border-color: #c8881e; }
+    .verdict-unclear { background: #f0f4ff; border-color: #3a5abf; }
+    .verdict-out { background: #f0faf4; border-color: var(--accent); }
+
+    .verdict-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .verdict-in-scope .verdict-tag { color: var(--accent2); }
+    .verdict-indirect .verdict-tag { color: #c8881e; }
+    .verdict-unclear .verdict-tag { color: #3a5abf; }
+    .verdict-out .verdict-tag { color: var(--accent); }
+
+    .verdict-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .verdict-body { font-size: 13px; color: var(--mid); line-height: 1.65; }
+
+    .next-steps {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .ns-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 12px;
+    }
+
+    .ns-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .ns-item:last-child { border-bottom: none; }
+
+    .ns-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--accent2);
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+
+    .disclaimer {
+      font-size: 11px;
+      color: var(--mid);
+      font-style: italic;
+      line-height: 1.6;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--paper2);
+      margin-bottom: 1rem;
+    }
+
+    .restart-btn {
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: var(--mid);
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 0.5rem;
+      display: inline-block;
+      padding: 0;
+    }
+
+    .restart-btn:hover { color: var(--ink); }
+
+    .footer {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--mid);
+      text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <p class="eyebrow">NIS2 / Cyberbeveiligingswet — Netherlands &amp; EU</p>
+    <h1>Are you in scope?</h1>
+    <p class="subtitle">Answer 5 questions. Get an honest assessment of your NIS2 exposure — no email required, no sales calls.</p>
+  </div>
+
+  <div class="progress-bar" id="progressBar"></div>
+  <div id="stepsContainer"></div>
+  <div class="result" id="result"></div>
+
+  <div class="footer">
+    This tool is provided for informational purposes only and does not constitute legal advice.<br>
+    NIS2 scope depends on national implementation. Always seek qualified legal advice for your specific situation.
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    id: 'country',
+    label: 'Step 1 of 5',
+    question: 'Where is your organisation primarily established?',
+    hint: 'NIS2 applies to organisations providing services within the EU. If you operate in multiple countries, select your main country of establishment.',
+    options: [
+      { value: 'nl', text: 'Netherlands', sub: 'Cyberbeveiligingswet expected ~July 2026' },
+      { value: 'eu_other', text: 'Other EU country', sub: 'Belgium, Germany, France, Italy, Spain…' },
+      { value: 'non_eu', text: 'Outside EU', sub: 'But serving EU customers or markets' },
+    ]
+  },
+  {
+    id: 'sector',
+    label: 'Step 2 of 5',
+    question: 'Which sector best describes your organisation?',
+    hint: 'NIS2 covers 18 sectors. Select the closest match.',
+    options: [
+      { value: 'essential', text: 'Energy, water, transport, healthcare, banking/finance, digital infrastructure', sub: 'Annex I — high criticality sectors' },
+      { value: 'important', text: 'Manufacturing, logistics, postal, food, chemicals, digital services, research', sub: 'Annex II — other critical sectors' },
+      { value: 'supply_chain', text: 'IT/managed services, software/SaaS, professional services', sub: 'May be in scope as ICT supplier to regulated entities' },
+      { value: 'public', text: 'Public administration / government body', sub: 'Directly covered' },
+      { value: 'other', text: 'Retail, hospitality, real estate, media, education (general)', sub: 'Generally outside direct scope' },
+    ]
+  },
+  {
+    id: 'size',
+    label: 'Step 3 of 5',
+    question: 'How large is your organisation?',
+    hint: 'NIS2 generally applies to medium-sized and large entities. Size is defined by both employee count and annual turnover.',
+    options: [
+      { value: 'micro', text: 'Fewer than 10 employees AND under €2M revenue', sub: 'Microenterprise — usually exempt unless critical sole provider' },
+      { value: 'small', text: '10–49 employees OR €2M–10M revenue', sub: 'Small enterprise — usually exempt in most sectors' },
+      { value: 'medium', text: '50–249 employees OR €10M–50M revenue', sub: 'Medium enterprise — in scope for important entities' },
+      { value: 'large', text: '250+ employees OR over €50M revenue', sub: 'Large enterprise — in scope for essential entities' },
+    ]
+  },
+  {
+    id: 'supply_pressure',
+    label: 'Step 4 of 5',
+    question: 'Do any of these apply to your organisation?',
+    hint: 'Even if you are technically outside direct scope, supply chain pressure is real and growing.',
+    options: [
+      { value: 'customer_asks', text: 'A large customer has asked us for cyber evidence or security questionnaires', sub: 'Common in manufacturing, logistics, IT services' },
+      { value: 'critical_supplier', text: 'We provide services critical to energy, health, finance, or public infrastructure', sub: 'May trigger indirect scope even if small' },
+      { value: 'sole_provider', text: 'We are the only provider of an essential service in our region', sub: 'Can be designated in scope regardless of size' },
+      { value: 'none', text: 'None of the above apply', sub: '' },
+    ]
+  },
+  {
+    id: 'readiness',
+    label: 'Step 5 of 5',
+    question: 'What is your current state of NIS2 preparation?',
+    hint: 'Be honest — this helps us give you the most useful output.',
+    options: [
+      { value: 'nothing', text: 'We have done nothing yet', sub: 'No assessment, no assigned owner, no budget' },
+      { value: 'aware', text: 'We are aware of NIS2 but have not started', sub: 'Conversations happening, no action yet' },
+      { value: 'started', text: 'We have started — gap assessment or policies in progress', sub: 'Some work done, but not complete' },
+      { value: 'advanced', text: 'We have a programme in place', sub: 'Evidence, incident plan, supplier risk, board reporting' },
+    ]
+  }
+];
+
+let answers = {};
+let currentStep = 0;
+
+function buildProgress() {
+  const bar = document.getElementById('progressBar');
+  bar.innerHTML = '';
+  questions.forEach((_, i) => {
+    const s = document.createElement('div');
+    s.className = 'progress-step' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+    bar.appendChild(s);
+  });
+}
+
+function buildStep(index) {
+  const container = document.getElementById('stepsContainer');
+  container.innerHTML = '';
+  const q = questions[index];
+  const div = document.createElement('div');
+  div.className = 'step active';
+
+  const optsHtml = q.options.map(o => `
+    <button class="opt${answers[q.id] === o.value ? ' selected' : ''}" onclick="selectOpt('${q.id}', '${o.value}', this)">
+      <span class="opt-dot"></span>
+      <span>
+        <span class="opt-text">${o.text}</span>
+        ${o.sub ? `<span class="opt-sub">${o.sub}</span>` : ''}
+      </span>
+    </button>
+  `).join('');
+
+  div.innerHTML = `
+    <p class="step-label">${q.label}</p>
+    <p class="question">${q.question}</p>
+    <p class="hint">${q.hint}</p>
+    <div class="options">${optsHtml}</div>
+    <div class="nav">
+      ${index > 0 ? `<button class="btn btn-ghost" onclick="goBack()">← Back</button>` : ''}
+      <button class="btn btn-primary" id="nextBtn" onclick="goNext()" ${!answers[q.id] ? 'disabled' : ''}>
+        ${index < questions.length - 1 ? 'Continue →' : 'See my result →'}
+      </button>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+function selectOpt(qId, value, el) {
+  answers[qId] = value;
+  document.querySelectorAll('.opt').forEach(o => {
+    o.classList.remove('selected');
+    o.querySelector('.opt-dot').style.background = '';
+    o.querySelector('.opt-dot').style.borderColor = '';
+  });
+  el.classList.add('selected');
+  el.querySelector('.opt-dot').style.background = 'var(--accent)';
+  el.querySelector('.opt-dot').style.borderColor = 'var(--accent)';
+  const nb = document.getElementById('nextBtn');
+  if (nb) nb.disabled = false;
+}
+
+function goNext() {
+  if (!answers[questions[currentStep].id]) return;
+  if (currentStep < questions.length - 1) {
+    currentStep++;
+    buildProgress();
+    buildStep(currentStep);
+  } else {
+    showResult();
+  }
+}
+
+function goBack() {
+  if (currentStep > 0) {
+    currentStep--;
+    buildProgress();
+    buildStep(currentStep);
+  }
+}
+
+function calcVerdict() {
+  const { sector, size, supply_pressure } = answers;
+  if (sector === 'public') return 'in_scope';
+  if (sector === 'essential' && (size === 'large' || size === 'medium')) return 'in_scope';
+  if (sector === 'important' && (size === 'large' || size === 'medium')) return 'in_scope';
+  if (supply_pressure === 'sole_provider') return 'in_scope';
+  if (supply_pressure === 'customer_asks' || supply_pressure === 'critical_supplier') return 'indirect';
+  if (sector === 'supply_chain' && (size === 'medium' || size === 'large')) return 'unclear';
+  if (sector === 'essential' && size === 'small') return 'unclear';
+  if (answers.country === 'non_eu') return 'unclear';
+  return 'out';
+}
+
+function getNextSteps(verdict) {
+  const steps = {
+    in_scope: [
+      'Designate an internal NIS2 owner — this is legally required under the directive.',
+      'Run a gap assessment against the 10 NIS2 Article 21 security measures.',
+      'Register with the Dutch NCSC (mandatory once Cyberbeveiligingswet enters force ~July 2026).',
+      'Set up an incident register and define your 24-hour reporting workflow.',
+      'Map your critical suppliers and assess their security posture.',
+      'Produce a board-level readiness report — management is personally liable for non-compliance.',
+    ],
+    indirect: [
+      'Determine if you are directly in scope — seek legal confirmation for your specific situation.',
+      'Respond to customer security questionnaires with documented evidence, not assurances.',
+      'Implement baseline cybersecurity hygiene: MFA, encrypted backups, access control, incident process.',
+      'Prepare a supplier security statement for your regulated customers.',
+      'Monitor whether your customers start requiring NIS2 contractual clauses in supplier agreements.',
+    ],
+    unclear: [
+      'Get a legal opinion on whether your organisation falls under NIS2 Annex I or II.',
+      'Check if your primary regulated customers will impose NIS2 contractual requirements on you.',
+      'Implement basic cyber hygiene regardless — it protects you and builds commercial trust.',
+      'Monitor national NIS2 implementation in your country — enforcement timelines vary.',
+    ],
+    out: [
+      'Confirm no critical infrastructure customers that could pull you into indirect supply chain scope.',
+      'Consider basic cyber hygiene as a commercial differentiator with regulated customers.',
+      'Revisit this assessment if your size, sector, or customer base changes.',
+      'Track NIS2 implementation in your country — thresholds and scope may evolve.',
+    ]
+  };
+  return steps[verdict];
+}
+
+function showResult() {
+  document.getElementById('stepsContainer').style.display = 'none';
+  document.getElementById('progressBar').innerHTML = '';
+
+  const verdict = calcVerdict();
+  const steps = getNextSteps(verdict);
+
+  const config = {
+    in_scope: {
+      cls: 'verdict-in-scope',
+      tag: 'Likely in scope',
+      title: 'Your organisation is likely directly subject to NIS2 / Cyberbeveiligingswet.',
+      body: `Based on your sector and size, you fall within the scope of NIS2 as ${answers.sector === 'essential' ? 'an essential entity' : 'an important entity'}. In the Netherlands, the Cyberbeveiligingswet is expected to enter into force around July 2026 and requires risk analysis, security measures, incident reporting within 24 hours, and registration with the NCSC. Personal liability applies to management. ${answers.readiness === 'nothing' || answers.readiness === 'aware' ? 'You are behind — this needs to be treated as a board-level priority now.' : 'You have started, which is good — focus on evidence, supplier risk, and incident readiness.'}`
+    },
+    indirect: {
+      cls: 'verdict-indirect',
+      tag: 'Indirectly affected',
+      title: 'You may not be directly in scope — but your customers will make it feel like you are.',
+      body: 'Your organisation appears to fall outside direct NIS2 scope by size or sector, but you are experiencing supply chain pressure. Regulated customers in energy, finance, healthcare, or logistics will increasingly require you to demonstrate cyber evidence, sign security annexes, and complete supplier questionnaires. Treat NIS2 readiness as a commercial requirement, not just a regulatory one.'
+    },
+    unclear: {
+      cls: 'verdict-unclear',
+      tag: 'Scope unclear — seek advice',
+      title: 'Your situation is ambiguous and requires a formal legal or sector assessment.',
+      body: 'Several factors make your NIS2 scope uncertain. Your sector, size, country, or service model create edge cases the directive does not resolve cleanly. National implementations vary across EU member states. Seek a formal legal opinion before assuming you are in or out of scope. In the meantime, implementing baseline cyber hygiene is both sensible and commercially valuable.'
+    },
+    out: {
+      cls: 'verdict-out',
+      tag: 'Likely out of scope',
+      title: 'Your organisation is probably not directly subject to NIS2.',
+      body: 'Based on your sector and size, you appear to fall outside the direct scope of NIS2. However, this can change: if your size grows, you take on regulated customers, or become a critical supplier, you may fall in scope. Indirect pressure from supply chain requirements is also possible. Consider baseline cyber hygiene as good practice regardless.'
+    }
+  };
+
+  const c = config[verdict];
+  const stepsHtml = steps.map((s, i) => `
+    <div class="ns-item">
+      <span class="ns-num">0${i+1}</span>
+      <span>${s}</span>
+    </div>
+  `).join('');
+
+  const resultEl = document.getElementById('result');
+  resultEl.innerHTML = `
+    <p class="step-label" style="margin-bottom:1.5rem;">Your result</p>
+    <div class="verdict-banner ${c.cls}">
+      <p class="verdict-tag">${c.tag}</p>
+      <p class="verdict-title">${c.title}</p>
+      <p class="verdict-body">${c.body}</p>
+    </div>
+    <div class="next-steps">
+      <p class="ns-title">Recommended next steps</p>
+      ${stepsHtml}
+    </div>
+    <p class="disclaimer">This tool provides an indicative assessment only. It does not constitute legal advice and does not replace a formal NIS2 gap assessment or legal opinion. NIS2 implementation varies by EU member state. Consult a qualified legal or cybersecurity advisor to confirm your obligations.</p>
+    <button class="restart-btn" onclick="restart()">← Start again</button>
+  `;
+  resultEl.classList.add('active');
+}
+
+function restart() {
+  answers = {};
+  currentStep = 0;
+  document.getElementById('stepsContainer').style.display = '';
+  document.getElementById('result').classList.remove('active');
+  document.getElementById('result').innerHTML = '';
+  buildProgress();
+  buildStep(0);
+}
+
+buildProgress();
+buildStep(0);
+</script>
+</body>
+</html>
